@@ -1,189 +1,187 @@
-import math
+#pgzero
 import random
 
-import pygame
-from pygame import mixer
+WIDTH = 600
+HEIGHT = 450
 
-# Intialize the pygame
-pygame.init()
+TITLE = "Космическое путешествие"
+FPS = 30
 
-# create the screen
-screen = pygame.display.set_mode((800, 600))
+# Объекты и переменные
+ship = Actor("ship", (300, 400))
+space = Actor("space")
+enemies = []
+planets = [Actor("plan1", (random.randint(0, 600), -100)), Actor("plan2", (random.randint(0, 600), -100)), Actor("plan3", (random.randint(0, 600), -100))]
+meteors = []
+bullets = []
+mode = 'ok'
+type1 = Actor("ship", (100, 250))
+type2 = Actor("ship-2", (300, 250))
+type3 = Actor("ship-3", (500, 250))
+count = 0
+e = 0
+d = 0
+first = "a"
 
-# Background
-background = pygame.image.load('background.png')
-
-# Sound
-mixer.music.load("background.wav")
-mixer.music.play(-1)
-
-# Caption and Icon
-pygame.display.set_caption("Space Invader")
-icon = pygame.image.load('ufo.png')
-pygame.display.set_icon(icon)
-
-# Player
-playerImg = pygame.image.load('player.png')
-playerX = 370
-playerY = 480
-playerX_change = 0
-
-# Enemy
-enemyImg = []
-enemyX = []
-enemyY = []
-enemyX_change = []
-enemyY_change = []
-num_of_enemies = 6
-
-for i in range(num_of_enemies):
-    enemyImg.append(pygame.image.load('enemy.png'))
-    enemyX.append(random.randint(0, 736))
-    enemyY.append(random.randint(50, 150))
-    enemyX_change.append(4)
-    enemyY_change.append(40)
-
-# Bullet
-
-# Ready - You can't see the bullet on the screen
-# Fire - The bullet is currently moving
-
-bulletImg = pygame.image.load('bullet.png')
-bulletX = 0
-bulletY = 480
-bulletX_change = 0
-bulletY_change = 10
-bullet_state = "ready"
-
-# Score
-
-score_value = 0
-font = pygame.font.Font('freesansbold.ttf', 32)
-
-textX = 10
-testY = 10
-
-# Game Over
-over_font = pygame.font.Font('freesansbold.ttf', 64)
+# Заполнение списка врагов
+for i in range(5):
+    p = random.randint(1,2)
+    x = random.randint(0, 600)
+    y = random.randint(-450, -50)
+    x1 = random.randint(0, 600)
+    y1 = random.randint(-450, -50)
+    if p == 1:
+        enemy = Actor("enemy", (x, y))
+        enemy.speed = random.randint(2, 10)
+        enemies.append(enemy)
+    elif p == 2:
+        meteor = Actor("meteor", (x1, y1))
+        meteor.speed = random.randint(2, 10)
+        enemies.append(meteor)
+        
+    
 
 
-def show_score(x, y):
-    score = font.render("Score : " + str(score_value), True, (255, 255, 255))
-    screen.blit(score, (x, y))
+# Отрисовка
+def draw():
+    # Режим игры
+    if first == "a":
+        space.draw()
+        screen.draw.text('Выберите сложность нажав на цифру', center = (300, 50), color = "white", fontsize = 30)
+        screen.draw.text('1 - Легко', center = (300, 100), color = "white", fontsize = 36)
+        screen.draw.text('2 - Сложно', center = (300, 150), color = "white", fontsize = 36)
+        
+    
+    if mode == 'menu':
+        space.draw()
+        screen.draw.text('Выберите корабль', center = (300, 100), color = "white", fontsize = 36)
+        type1.draw()
+        type2.draw()
+        type3.draw()
+    if mode == 'game':
+        space.draw()
+        planets[0].draw()
+        #Отрисовка счета
+        screen.draw.text(count, (10, 10), color = "white")
+        # Отрисовка метеоритов
+        for i in range(len(meteors)):
+            meteors[i].draw()
+        ship.draw()
+        # Отрисовка врагов
+        for i in range(len(enemies)):
+            enemies[i].draw()
+        #Отрисовка пуль
+        for i in range(len(bullets)):
+            bullets[i].draw()
+        
+    # Окно проигрыша    
+    elif mode == 'end':
+        space.draw()
+        screen.draw.text("GAME OVER!", center = (300, 200), color = "white", fontsize = 36)
+        #Итоговый счет
+        screen.draw.text(count, center = (300, 250), color = "white", fontsize = 64)
+    
+# Управление
+def on_mouse_move(pos):
+    ship.pos = pos
 
+# Добавление в список нового врага
+def new_enemy():
+    x = random.randint(0, 400)
+    y = -50
+    enemy = Actor("enemy", (x, y))
+    enemy.speed = random.randint(e, d)
+    enemies.append(enemy)
 
-def game_over_text():
-    over_text = over_font.render("GAME OVER", True, (255, 255, 255))
-    screen.blit(over_text, (200, 250))
+# Движение врагов
+def enemy_ship():
+    for i in range(len(enemies)):
+        if enemies[i].y < 650:
+            enemies[i].y = enemies[i].y + enemies[i].speed
+        else:
+            enemies.pop(i)
+            new_enemy()
 
-
-def player(x, y):
-    screen.blit(playerImg, (x, y))
-
-
-def enemy(x, y, i):
-    screen.blit(enemyImg[i], (x, y))
-
-
-def fire_bullet(x, y):
-    global bullet_state
-    bullet_state = "fire"
-    screen.blit(bulletImg, (x + 16, y + 10))
-
-
-def isCollision(enemyX, enemyY, bulletX, bulletY):
-    distance = math.sqrt(math.pow(enemyX - bulletX, 2) + (math.pow(enemyY - bulletY, 2)))
-    if distance < 27:
-        return True
+# Движение планет
+def planet():
+    if planets[0].y < 550:
+            planets[0].y = planets[0].y + 1
     else:
-        return False
+        planets[0].y = -100
+        planets[0].x = random.randint(0, 600)
+        first = planets.pop(0)
+        planets.append(first)
+
+# Движение метеоритов
+def meteorites():
+    for i in range(len(meteors)):
+        if meteors[i].y < 450:
+            meteors[i].y = meteors[i].y + meteors[i].speed
+        else:
+            meteors[i].x = random.randint(0, 600)
+            meteors[i].y = -20
+            meteors[i].speed = random.randint(2, 10)
+
+# Столкновения
+def collisions():
+    global mode, count, d, e
+    
+    
+    for i in range(len(enemies)):
+        if ship.colliderect(enemies[i]):
+            mode = 'end'
+        #Столкновение с пуями
+        for j in range(len(bullets)):
+            if bullets[j].colliderect(enemies[i]) :
+                count = count + 1
+               
+                enemies.pop(i)
+                bullets.pop(j)
+                new_enemy()
+                break
+            
+def update(dt):
+    global first, e, d, mode
+    if mode == 'game':
+        enemy_ship()
+        collisions()
+        planet()
+        meteorites()
+        # Движение пуль
+        for i in range(len(bullets)):
+            if bullets[i].y < 0:
+                bullets.pop(i)
+                break
+            else:
+                bullets[i].y = bullets[i].y - 10
+    elif keyboard.k_1 and first == "a":
+        e = 2
+        d = 10
+        mode = "menu"    
+        
+    elif keyboard.k_2 and first == "a":
+        e = 25
+        d = 56
+        mode = "menu"
+    
+        
 
 
-# Game Loop
-running = True
-while running:
-
-    # RGB = Red, Green, Blue
-    screen.fill((0, 0, 0))
-    # Background Image
-    screen.blit(background, (0, 0))
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-        # if keystroke is pressed check whether its right or left
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                playerX_change = -5
-            if event.key == pygame.K_RIGHT:
-                playerX_change = 5
-            if event.key == pygame.K_SPACE:
-                if bullet_state is "ready":
-                    bulletSound = mixer.Sound("laser.wav")
-                    bulletSound.play()
-                    # Get the current x cordinate of the spaceship
-                    bulletX = playerX
-                    fire_bullet(bulletX, bulletY)
-
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                playerX_change = 0
-
-    # 5 = 5 + -0.1 -> 5 = 5 - 0.1
-    # 5 = 5 + 0.1
-
-    playerX += playerX_change
-    if playerX <= 0:
-        playerX = 0
-    elif playerX >= 736:
-        playerX = 736
-
-    # Enemy Movement
-    for i in range(num_of_enemies):
-
-        # Game Over
-        if enemyY[i] > 440:
-            for j in range(num_of_enemies):
-                enemyY[j] = 2000
-            game_over_text()
-            break
-
-        enemyX[i] += enemyX_change[i]
-        if enemyX[i] <= 0:
-            enemyX_change[i] = 4
-            enemyY[i] += enemyY_change[i]
-        elif enemyX[i] >= 736:
-            enemyX_change[i] = -4
-            enemyY[i] += enemyY_change[i]
-
-        # Collision
-        collision = isCollision(enemyX[i], enemyY[i], bulletX, bulletY)
-        if collision:
-            explosionSound = mixer.Sound("explosion.wav")
-            explosionSound.play()
-            bulletY = 480
-            bullet_state = "ready"
-            score_value += 1
-            enemyX[i] = random.randint(0, 736)
-            enemyY[i] = random.randint(50, 150)
-
-        enemy(enemyX[i], enemyY[i], i)
-
-    # Bullet Movement
-    if bulletY <= 0:
-        bulletY = 480
-        bullet_state = "ready"
-
-    if bullet_state is "fire":
-        fire_bullet(bulletX, bulletY)
-        bulletY -= bulletY_change
-
-    player(playerX, playerY)
-    show_score(textX, testY)
-    pygame.display.update()
-Footer
-© 2023 GitHub, Inc.
-Footer navigation
-Terms
-Privacy
-Secu
+#Функция обработки кликов
+def on_mouse_down(button, pos):
+    global mode
+    global ship
+    if mode == 'menu' and type1.collidepoint(pos):
+        ship.image = "ship"
+        mode = 'game'
+    elif mode == 'menu' and type2.collidepoint(pos):
+        ship.image = "ship-2"
+        mode = 'game'
+    elif mode == 'menu' and type3.collidepoint(pos):
+        ship.image = "ship-3"
+        mode = 'game'
+    #Стрельба
+    elif mode == 'game' and button == mouse.LEFT:
+        bullet = Actor("bullet")
+        bullet.pos = ship.pos
+        bullets.append(bullet)
